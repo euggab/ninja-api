@@ -1,25 +1,25 @@
-FROM openjdk:11
+# Базовый образ с Java
+FROM openjdk:11-jdk-slim
 
-# Build-Zeit-Variablen definieren
-ARG SPARK_VERSION=3.5.1
-ARG HADOOP_VERSION=3
+# Устанавливаем необходимые утилиты
+RUN apt-get update && apt-get install -y curl bash && apt-get clean
 
-# Laufzeitvariablen (für späteren Gebrauch)
-ENV SPARK_HOME=/opt/spark
-ENV PATH=$SPARK_HOME/bin:$PATH
+# Устанавливаем Spark
+ENV SPARK_VERSION=3.5.1 \
+    HADOOP_VERSION=3 \
+    SPARK_HOME=/opt/spark
 
-WORKDIR /opt
+RUN curl -fsSL https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz | \
+    tar -xz -C /opt && \
+    mv /opt/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} ${SPARK_HOME}
 
-# Spark herunterladen und entpacken
-RUN apt-get update && apt-get install -y curl && \
-    curl -fSL https://downloads.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz -o spark.tgz && \
-    tar -xzf spark.tgz && \
-    mv spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} spark && \
-    rm spark.tgz && \
-    rm -rf /var/lib/apt/lists/*
+ENV PATH="${SPARK_HOME}/bin:${PATH}"
 
-# Ports für Web UI und Kommunikation
-EXPOSE 7077 8080 4040
+# Копируем конфиги, если есть
+# COPY conf/* $SPARK_HOME/conf/
 
-# Startet Spark Master im Standalone-Modus
-CMD ["spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
+# Открываем нужные порты
+EXPOSE 4040 7077 8080 18080
+
+# Команда по умолчанию — запуск Spark master
+CMD ["spark-class", "org.apache.spark.deploy.master.Master"]
